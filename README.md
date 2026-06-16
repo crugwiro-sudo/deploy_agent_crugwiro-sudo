@@ -70,3 +70,6 @@ This means you never end up with a half-built broken folder left behind.
 - Linux or WSL (Windows Subsystem for Linux)
 - Python 3 (to run the attendance checker after setup)
 - `bc` and `tar` (come pre-installed on most Linux systems)
+
+## Video Link 
+- https://youtu.be/kUQr-hs0rvI
