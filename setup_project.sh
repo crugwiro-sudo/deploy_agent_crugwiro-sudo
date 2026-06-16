@@ -105,3 +105,23 @@ cat > "$PROJECT_DIR/reports/reports.log" << 'LOGEOF'
 LOGEOF
 
 echo "All files written."
+
+# Ask the user if they want to update thresholds
+echo ""
+echo "The default attendance thresholds are: Warning = 75%, Failure = 50%"
+read -rp "Do you want to change these thresholds? (y/N): " UPDATE_CONFIG
+
+if [[ "$UPDATE_CONFIG" =~ ^[Yy]$ ]]; then
+    read -rp "Enter the new WARNING threshold (0-100): " NEW_WARNING
+    NEW_WARNING="${NEW_WARNING:-75}"
+    read -rp "Enter the new FAILURE threshold (0-100): " NEW_FAILURE
+    NEW_FAILURE="${NEW_FAILURE:-50}"
+
+    CONFIG_FILE="$PROJECT_DIR/Helpers/config.json"
+    sed -i "s/\"warning\": [0-9.]*/\"warning\": $NEW_WARNING/" "$CONFIG_FILE"
+    sed -i "s/\"failure\": [0-9.]*/\"failure\": $NEW_FAILURE/" "$CONFIG_FILE"
+
+    echo "Thresholds updated to: Warning = ${NEW_WARNING}%, Failure = ${NEW_FAILURE}%"
+else
+    echo "Keeping the default thresholds."
+fi
