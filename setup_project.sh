@@ -153,7 +153,7 @@ else
 fi
 
 echo ""
-echo "Running health check..."
+echo "Running environment health check..."
 
 python3 --version > /dev/null 2>&1
 if [ $? -eq 0 ]; then
