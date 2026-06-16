@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # setup_project.sh
-# Automated Project Bootstrapping & Process Management
+# This script sets up the Student Attendance Tracker project folder automatically.
 # Author: crugwiro-sudo
 
-echo "Student Attendance Tracker - Setup Script"
+echo "Welcome to the Attendance Tracker Setup"
 echo ""
 
 read -rp "Enter a project name (example: spring2026): " PROJECT_INPUT
@@ -15,6 +15,23 @@ if [ -z "$PROJECT_INPUT" ]; then
 fi
 
 PROJECT_DIR="attendance_tracker_${PROJECT_INPUT}"
+ARCHIVE_NAME="attendance_tracker_${PROJECT_INPUT}_archive"
+
+cleanup() {
+    echo ""
+    echo "You cancelled the setup."
+    if [ -d "$PROJECT_DIR" ]; then
+        echo "Saving what was created so far into an archive..."
+        tar -czf "${ARCHIVE_NAME}.tar.gz" "$PROJECT_DIR"
+        echo "Archive saved as: ${ARCHIVE_NAME}.tar.gz"
+        rm -rf "$PROJECT_DIR"
+        echo "Incomplete folder deleted to keep things clean."
+    fi
+    echo "Goodbye."
+    exit 1
+}
+
+trap cleanup SIGINT
 
 if [ -d "$PROJECT_DIR" ]; then
     echo "Warning: A folder called '$PROJECT_DIR' already exists."
@@ -36,8 +53,6 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Folders created successfully."
-
-# Write source files
 echo "Writing project files..."
 
 cat > "$PROJECT_DIR/attendance_checker.py" << 'PYEOF'
@@ -49,11 +64,9 @@ from datetime import datetime
 def run_attendance_check():
     with open('Helpers/config.json', 'r') as f:
         config = json.load(f)
-    
     if os.path.exists('reports/reports.log'):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         os.rename('reports/reports.log', f'reports/reports_{timestamp}.log.archive')
-
     with open('Helpers/assets.csv', mode='r') as f, open('reports/reports.log', 'w') as log:
         reader = csv.DictReader(f)
         total_sessions = config['total_sessions']
@@ -106,22 +119,76 @@ LOGEOF
 
 echo "All files written."
 
-# Ask the user if they want to update thresholds
 echo ""
 echo "The default attendance thresholds are: Warning = 75%, Failure = 50%"
 read -rp "Do you want to change these thresholds? (y/N): " UPDATE_CONFIG
 
 if [[ "$UPDATE_CONFIG" =~ ^[Yy]$ ]]; then
-    read -rp "Enter the new WARNING threshold (0-100): " NEW_WARNING
-    NEW_WARNING="${NEW_WARNING:-75}"
-    read -rp "Enter the new FAILURE threshold (0-100): " NEW_FAILURE
-    NEW_FAILURE="${NEW_FAILURE:-50}"
-
+    while true; do
+        read -rp "Enter the new WARNING threshold (0-100): " NEW_WARNING
+        NEW_WARNING="${NEW_WARNING:-75}"
+        if [[ "$NEW_WARNING" =~ ^[0-9]+([.][0-9]+)?$ ]] && (( $(echo "$NEW_WARNING >= 0 && $NEW_WARNING <= 100" | bc -l) )); then
+            break
+        else
+            echo "That's not a valid number. Please enter a number between 0 and 100."
+        fi
+    done
+    while true; do
+        read -rp "Enter the new FAILURE threshold (0-100): " NEW_FAILURE
+        NEW_FAILURE="${NEW_FAILURE:-50}"
+        if [[ "$NEW_FAILURE" =~ ^[0-9]+([.][0-9]+)?$ ]] && (( $(echo "$NEW_FAILURE >= 0 && $NEW_FAILURE <= 100" | bc -l) )); then
+            break
+        else
+            echo "That's not a valid number. Please enter a number between 0 and 100."
+        fi
+    done
     CONFIG_FILE="$PROJECT_DIR/Helpers/config.json"
     sed -i "s/\"warning\": [0-9.]*/\"warning\": $NEW_WARNING/" "$CONFIG_FILE"
     sed -i "s/\"failure\": [0-9.]*/\"failure\": $NEW_FAILURE/" "$CONFIG_FILE"
-
-    echo "Thresholds updated to: Warning = ${NEW_WARNING}%, Failure = ${NEW_FAILURE}%"
+    echo "Thresholds updated. New values: Warning = ${NEW_WARNING}%, Failure = ${NEW_FAILURE}%"
+    echo "Here is the updated config.json:"
+    cat "$CONFIG_FILE"
 else
     echo "Keeping the default thresholds."
 fi
+
+echo ""
+echo "Running health check..."
+
+python3 --version > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+    echo "Python3 is installed: $(python3 --version)"
+else
+    echo "Warning: Python3 was not found. You will need it to run the application."
+fi
+
+echo "Checking that all files are in place..."
+ALL_GOOD=true
+
+for FILE in \
+    "$PROJECT_DIR/attendance_checker.py" \
+    "$PROJECT_DIR/Helpers/assets.csv" \
+    "$PROJECT_DIR/Helpers/config.json" \
+    "$PROJECT_DIR/reports/reports.log"
+do
+    if [ -f "$FILE" ]; then
+        echo "  Found: $FILE"
+    else
+        echo "  MISSING: $FILE"
+        ALL_GOOD=false
+    fi
+done
+
+if [ "$ALL_GOOD" = true ]; then
+    echo "All files are present. Setup was successful!"
+else
+    echo "Warning: Some files are missing. Something may have gone wrong."
+fi
+
+echo ""
+echo "Setup complete!"
+echo "Your project is ready in the folder: $PROJECT_DIR"
+echo ""
+echo "To run the app:"
+echo "  cd $PROJECT_DIR"
+echo "  python3 attendance_checker.py"
