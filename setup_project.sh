@@ -7,7 +7,6 @@
 echo "Student Attendance Tracker - Setup Script"
 echo ""
 
-# Ask the user for a project name
 read -rp "Enter a project name (example: spring2026): " PROJECT_INPUT
 
 if [ -z "$PROJECT_INPUT" ]; then
@@ -17,7 +16,18 @@ fi
 
 PROJECT_DIR="attendance_tracker_${PROJECT_INPUT}"
 
-# Create the folder structure
+# If the folder already exists, ask before overwriting
+if [ -d "$PROJECT_DIR" ]; then
+    echo "Warning: A folder called '$PROJECT_DIR' already exists."
+    read -rp "Do you want to delete it and start fresh? (y/N): " OVERWRITE
+    if [[ "$OVERWRITE" =~ ^[Yy]$ ]]; then
+        rm -rf "$PROJECT_DIR"
+    else
+        echo "Setup cancelled. Nothing was changed."
+        exit 0
+    fi
+fi
+
 mkdir -p "$PROJECT_DIR/Helpers"
 mkdir -p "$PROJECT_DIR/reports"
 
@@ -26,4 +36,4 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "Folders created: $PROJECT_DIR"
+echo "Folders created successfully."
